@@ -54,7 +54,8 @@ class UPS:
             read = self._bus.read_word_data(CW2015_ADDRESS, CW2015_REG_SOC)
             swapped = struct.unpack("<H", struct.pack(">H", read))[0]
             return swapped / 256
-        except:
+        except Exception as e:
+            logging.error(e)
             return 0.0
 
     def charging(self):
@@ -62,7 +63,8 @@ class UPS:
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(4, GPIO.IN)
             return '+' if GPIO.input(4) == GPIO.HIGH else '-'
-        except:
+        except Exception as e:
+            logging.error(e)
             return '-'
 
 
