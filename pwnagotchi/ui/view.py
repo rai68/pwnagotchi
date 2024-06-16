@@ -390,12 +390,32 @@ class View(object):
             state = self._state
             changes = state.changes(ignore=self._ignore_changes)
             if force or len(changes):
-                self._canvas = Image.new('1', (self._width, self._height), self._white)
-                drawer = ImageDraw.Draw(self._canvas)
+                self._canvas = Image.new(self.mode, (self._width, self._height), self.BACKGROUND)
+                drawer = ImageDraw.Draw(self._canvas, self.mode)
+                
+                #draw an image background here
+                if self.theme != None:
+                    if not hasattr(self, 'bg_png_im'):
+                        #a theme was loaded but ui creation skipped it? we should make a error and stop
+                        pass
+                    else:
+                        self._canvas.paste(self.theme.bg_png_im, (0,0))
+                        
+                    
 
                 plugins.on('ui_update', self)
 
                 for key, lv in state.items():
+                    #lv is a ui element
+                    #
+                    #random colors for fun
+                    if self._config['ui'].get('randomise', False):
+                        if self.mode == "RGB" :
+                            lv.color = (random.randint(0, 255),random.randint(0, 255),random.randint(0, 255))
+                        elif self.mode == "BGR;16":
+                            lv.color = (random.randint(0, 31),random.randint(0, 63),random.randint(0, 31))
+                    
+                    #draw final LV
                     lv.draw(self._canvas, drawer)
 
                 web.update_frame(self._canvas)
