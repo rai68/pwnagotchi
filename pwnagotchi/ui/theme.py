@@ -25,10 +25,10 @@ class Theme():
         self._config = config
         self._state = None
         self.display = {}
-        self.display._height = height
-        self.display._width = width
-        self.display.colormode = color
-        self.display._ori = ori
+        self.display['_height'] = height
+        self.display['_width'] = width
+        self.display['colormode'] = color
+        self.display['_ori'] = ori
         self.found = False
         self.theme_config = None
         self._loadedTheme_root = None
