@@ -23,6 +23,22 @@ class Bitmap(Widget):
             self.image = ImageOps.invert(self.image)
         canvas.paste(self.image, self.xy)
 
+class Image(Widget):
+    def __init__(self, path, xy):
+        super().__init__(xy)
+        self.image = Image.open(path)
+        
+    def draw(self, canvas, drawer):
+        canvas.paste(self.image, self.xy)
+
+class ImageBackground(Widget):
+    def __init__(self, path=None, xy=(0,0)):
+        super().__init__(xy)
+        self.image = Image.open(path)
+        
+    def draw(self, canvas, drawer):
+        canvas.paste(self.image, self.xy)
+
 
 class Line(Widget):
     def __init__(self, xy, color=0, width=1):
@@ -93,3 +109,32 @@ class LabeledValue(Widget):
             pos = self.xy
             drawer.text(pos, self.label, font=self.label_font, fill=self.color)
             drawer.text((pos[0] + self.label_spacing + 5 * len(self.label), pos[1]), self.value, font=self.text_font, fill=self.color)
+
+
+
+class Face(Widget):
+    def __init__(self, value="", position=(0, 0), font=None, color=0, wrap=False, max_length=0, png=False):
+        super().__init__(position, color)
+        self.value = value
+        self.font = font
+        self.wrap = wrap
+        self.max_length = max_length
+        self.wrapper = TextWrapper(width=self.max_length, replace_whitespace=False) if wrap else None
+        self.png = png
+        self.image = None
+        
+        if self.png == True:
+            self.image = Image.open(self.value)
+        else:
+            pass
+
+    def draw(self, canvas, drawer):
+        if self.value is not None:
+            if not self.png:
+                if self.wrap:
+                    text = '\n'.join(self.wrapper.wrap(self.value))
+                else:
+                    text = self.value
+                drawer.text(self.xy, text, font=self.font, fill=self.color)
+            else:
+                canvas.paste(self.image, self.position)

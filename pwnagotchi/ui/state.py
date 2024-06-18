@@ -12,6 +12,13 @@ class State(object):
         self._state[key] = elem
         self._changes[key] = True
 
+    def add_raw(self, state):
+        #adds a raw block of states used for theme injection of elements after state is created
+        self._state = state
+    
+    def add_single_raw(self, key , elem):
+        self._state[key] = elem
+
     def has_element(self, key):
         return key in self._state
 
