@@ -7,9 +7,10 @@ from pwnagotchi.ui.hw.base import DisplayImpl
 class DisplayHatMini(DisplayImpl):
     def __init__(self, config):
         super(DisplayHatMini, self).__init__(config, 'displayhatmini')
-
+        self.mode = "RGB" # its actually BGR;16  5,6,5 bit, but display converts it
+        
     def layout(self):
-        fonts.setup(12, 10, 12, 70, 25, 9)
+        fonts.setup(12, 10, 12, 70, 25, 9) #sets up font size
         self._layout['width'] = 320
         self._layout['height'] = 240
         self._layout['face'] = (35, 50)

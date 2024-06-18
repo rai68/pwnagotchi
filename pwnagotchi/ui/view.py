@@ -2,9 +2,11 @@ import _thread
 import logging
 import random
 import time
+import os
 from threading import Lock
 
 from PIL import ImageDraw
+import toml
 
 import pwnagotchi
 import pwnagotchi.plugins as plugins
@@ -16,25 +18,104 @@ from pwnagotchi.ui.components import *
 from pwnagotchi.ui.state import State
 from pwnagotchi.voice import Voice
 
-WHITE = 0x00
-BLACK = 0xFF
+#defaults for backwards compat
+WHITE = 0x00 # white is actually black on jays image
+BLACK = 0xFF # black is actually white on jays image
+
+#self.FOREGROUND is the main color
+#self.BACKGROUNDGROUND is the 2ndary color, used for background
+
+#1 (1-bit pixels, black and white, stored with one pixel per byte)
+BACKGROUND_1 = 0
+FOREGROUND_1 = 1
+
+#L (8-bit pixels, grayscale)
+BACKGROUND_L = 0
+FOREGROUND_L = 255
+
+#BGR;16 (5,6,5 bits, for 65k color)
+BACKGROUND_BGR_16 = (0,0,0)
+FOREGROUND_BGR_16 = (31,63,31)
+
+#RGB;18 (6,6,6 bits, for 262k color)
+BACKGROUND_BGR_18 = (0,0,0)
+FOREGROUND_BGR_18 = (63,63,63)
+
+#RGB (3x8-bit pixels, true color)
+BACKGROUND_RGB = (0,0,0)
+FOREGROUND_RGB = (255,255,255)
+
+
 ROOT = None
+
+# Unused display colors so far
+#P (8-bit pixels, mapped to any other mode using a color palette)
+#RGBA (4x8-bit pixels, true color with transparency mask)
+#CMYK (4x8-bit pixels, color separation)
+#YCbCr (3x8-bit pixels, color video format)
+
+
 
 
 class View(object):
     def __init__(self, config, impl, state=None):
         global ROOT, BLACK, WHITE
         
+        #values/code for display color mode    
+        self.theme = None
+        self.mode = '1' # 1 = (1-bit pixels, black and white, stored with one pixel per byte)
+        if hasattr(impl, 'mode'):
+            self.mode = impl.mode
+            
+        
+        
+        match self.mode:
+            case '1':
+                self.BACKGROUND = BACKGROUND_1
+                self.FOREGROUND = FOREGROUND_1
+                # do stuff is color mode is 1 when View object is created. 
+            case 'L':
+                self.BACKGROUND =  BACKGROUND_L # black 0 to 255
+                self.FOREGROUND = FOREGROUND_L
+                # do stuff is color mode is L when View object is created.
+            case 'P':
+                pass
+                # do stuff is color mode is P when View object is created.
+            case 'BGR;16':
+                self.BACKGROUND = BACKGROUND_BGR_16 #black tuple
+                self.FOREGROUND = FOREGROUND_BGR_16 #white tuple
+            case 'RGB':
+                self.BACKGROUND = BACKGROUND_RGB #black tuple
+                self.FOREGROUND = FOREGROUND_RGB #white tuple
+                # do stuff is color mode is RGB when View object is created.
+            case 'RGBA':
+                # do stuff is color mode is RGBA when View object is created.
+                pass
+            case 'CMYK':
+                # do stuff is color mode is CMYK when View object is created.
+                pass
+            case 'YCbCr':
+                # do stuff is color mode is YCbCr when View object is created.
+                pass
+            case _:
+                # do stuff when color mode doesnt exist for display
+                self.BACKGROUND = BACKGROUND_1
+                self.FOREGROUND = FOREGROUND_1
+            
+            
         self.invert = 0
-        self._black = 0xFF
-        self._white = 0x00
-        if 'invert' in config['ui'] and config['ui']['invert']:
-            logging.debug("INVERT BLACK/WHITES:" + str(config['ui']['invert']))
-            self.invert = 1
-            BLACK = 0x00
-            WHITE = 0xFF
-            self._black = 0x00
-            self._white = 0xFF
+        
+        self.load_theme(self)
+
+        if config['ui'].get('invert', False):
+            if self.mode != "1":
+                logging.debug("display does not support inverting (yet?): " + str(config['ui']['invert']))
+            else:
+                logging.debug("display inverting: " + str(config['ui']['invert']))
+                self.invert = 1
+                tmp = self.BACKGROUND 
+                self.BACKGROUND = self.FOREGROUND
+                self.FOREGROUND = tmp
 
         # setup faces from the configuration in case the user customized them
         faces.load_from_config(config['ui']['faces'])
@@ -47,44 +128,45 @@ class View(object):
         self._lock = Lock()
         self._voice = Voice(lang=config['main']['lang'])
         self._implementation = impl
-        self._layout = impl.layout()
+        self._layout = impl.layout() # ui layout in display config, should be defaults if no theme or config
         self._width = self._layout['width']
         self._height = self._layout['height']
+        self._orientation = None #this actually isnt supported on like 90% of displays lol, its not exposed anywhere
         self._state = State(state={
-            'channel': LabeledValue(color=BLACK, label='CH', value='00', position=self._layout['channel'],
+            'channel': LabeledValue(color=self.FOREGROUND, label='CH', value='00', position=self._layout['channel'],
                                     label_font=fonts.Bold,
                                     text_font=fonts.Medium),
-            'aps': LabeledValue(color=BLACK, label='APS', value='0 (00)', position=self._layout['aps'],
+            'aps': LabeledValue(color=self.FOREGROUND, label='APS', value='0 (00)', position=self._layout['aps'],
                                 label_font=fonts.Bold,
                                 text_font=fonts.Medium),
 
-            'uptime': LabeledValue(color=BLACK, label='UP', value='00:00:00', position=self._layout['uptime'],
+            'uptime': LabeledValue(color=self.FOREGROUND, label='UP', value='00:00:00', position=self._layout['uptime'],
                                    label_font=fonts.Bold,
                                    text_font=fonts.Medium),
 
-            'line1': Line(self._layout['line1'], color=BLACK),
-            'line2': Line(self._layout['line2'], color=BLACK),
+            'line1': Line(self._layout['line1'], color=self.FOREGROUND),
+            'line2': Line(self._layout['line2'], color=self.FOREGROUND),
 
-            'face': Text(value=faces.SLEEP, position=(config['ui']['faces']['position_x'], config['ui']['faces']['position_y']), color=BLACK, font=fonts.Huge, png=config['ui']['faces']['png']),
+            'face': Text(value=faces.SLEEP, position=(config['ui']['faces']['position_x'], config['ui']['faces']['position_y']), color=self.FOREGROUND, font=fonts.Huge, png=config['ui']['faces']['png']),
 
-            # 'friend_face': Text(value=None, position=self._layout['friend_face'], font=fonts.Bold, color=BLACK),
-            'friend_name': Text(value=None, position=self._layout['friend_face'], font=fonts.BoldSmall, color=BLACK),
+            # 'friend_face': Text(value=None, position=self._layout['friend_face'], font=fonts.Bold, color=self.FOREGROUND),
+            'friend_name': Text(value=None, position=self._layout['friend_face'], font=fonts.BoldSmall, color=self.FOREGROUND),
 
-            'name': Text(value='%s>' % 'pwnagotchi', position=self._layout['name'], color=BLACK, font=fonts.Bold),
+            'name': Text(value='%s>' % 'pwnagotchi', position=self._layout['name'], color=self.FOREGROUND, font=fonts.Bold),
 
             'status': Text(value=self._voice.default(),
                            position=self._layout['status']['pos'],
-                           color=BLACK,
+                           color=self.FOREGROUND,
                            font=self._layout['status']['font'],
                            wrap=True,
                            # the current maximum number of characters per line, assuming each character is 6 pixels wide
                            max_length=self._layout['status']['max']),
 
-            'shakes': LabeledValue(label='PWND ', value='0 (00)', color=BLACK,
+            'shakes': LabeledValue(label='PWND ', value='0 (00)', color=self.FOREGROUND,
                                    position=self._layout['shakes'], label_font=fonts.Bold,
                                    text_font=fonts.Medium),
             'mode': Text(value='AUTO', position=self._layout['mode'],
-                         font=fonts.Bold, color=BLACK),
+                         font=fonts.Bold, color=self.FOREGROUND),
         })
 
         if state:
@@ -109,11 +191,16 @@ class View(object):
         self._state.has_element(key)
 
     def add_element(self, key, elem):
-        if self.invert is 1 and hasattr(elem, 'color'):
-            if elem.color == 0xff:
-                elem.color = 0x00
-            elif elem.color == 0x00:
-                elem.color = 0xff
+        # this is the ui invert code, its being removed in favour for FOREGROUND/BACKGROUND configs
+        #if self.invert is 1 and hasattr(elem, 'color'):
+        #    if elem.color == 0xff: 
+        #        elem.color = 0x00
+        #    elif elem.color == 0x00:
+        #        elem.color = 0xff
+        
+        # sets color to foreground overwriting everything that sets a color.
+        #if ui element has a color set in config/theme use that instead
+        elem.color = self.FOREGROUND
         self._state.add_element(key, elem)
 
     def remove_element(self, key):
@@ -378,6 +465,39 @@ class View(object):
         self.set('face', faces.DEBUG)
         self.set('status', self._voice.custom(text))
         self.update()
+        
+        
+    def load_theme(self):
+        to_load = self._config['ui'].get('theme', False)
+        logging.debug("Loading theme: " + to_load)
+        themes_dirs = []
+        themes_dirs.extend(self._config.get('custom_themes'), ["/etc/pwnagotchi/themes"])
+        
+        themes = []
+        for index, directory in enumerate(themes_dirs):
+            for dirs in os.walk(directory):
+                if dirs == to_load:
+                    try:
+                        theme_config = toml.load(directory + dirs + "theme.toml")
+                    except Exception as e:
+                        pass
+                    
+        
+        
+        
+        
+        display_type = self._config['ui'].get('display', None)
+        display_size_h = self._height
+        display_size_w = self._width
+        display_ori = self._ori 
+        
+        
+    
+        png_dir = self._config['ui']['theme'].get('background_png', False)
+        if png_dir:
+            png_image = Image.open(png_dir).convert(self.mode)
+            self.bg_png_im = png_image
+            self._canvas.paste(png_image, (0,0))
 
     def update(self, force=False, new_data={}):
         for key, val in new_data.items():
