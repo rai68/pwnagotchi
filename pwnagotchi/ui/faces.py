@@ -11,6 +11,7 @@ import toml
 import pwnagotchi
 import pwnagotchi.plugins as plugins
 import pwnagotchi.ui.fonts as fonts
+import pwnagotchi.ui.faces as faces
 import pwnagotchi.ui.web as web
 import pwnagotchi.ui.theme as theme
 import pwnagotchi.utils as utils
@@ -19,45 +20,48 @@ from pwnagotchi.ui.state import State
 from pwnagotchi.voice import Voice
     
     
-DEFAULTS = {
-            'LOOK_R': '( ⚆_⚆)',
-            'LOOK_L': '(☉_⚆)',
-            'LOOK_R_HAPPY': '( ◕‿◕)',
-            'LOOK_L_HAPPY': '(◕‿◕ )',
-            'SLEEP': '(⇀‿‿↼)',
-            'SLEEP2': '(≖‿‿≖)',
-            'AWAKE': '(◕‿‿◕)',
-            'BORED': '(-__-)',
-            'INTENSE': '(°▃▃°)',
-            'COOL': '(⌐■_■)',
-            'HAPPY': '(•‿‿•)',
-            'GRATEFUL': '(^‿‿^)',
-            'EXCITED': '(ᵔ◡◡ᵔ)',
-            'MOTIVATED': '(☼‿‿☼)',
-            'DEMOTIVATED': '(≖__≖)',
-            'SMART': '(✜‿‿✜)',
-            'LONELY': '(ب__ب)',
-            'SAD': '(╥☁╥ )',
-            'ANGRY': "(-_-')",
-            'FRIEND': '(♥‿‿♥)',
-            'BROKEN': '(☓‿‿☓)',
-            'DEBUG': '(#__#)',
-            'UPLOAD': '(1__0)',
-            'UPLOAD1': '(1__1)',
-            'UPLOAD2': '(0__1)'
-        }
+LOOK_R = '( ⚆_⚆)'
+LOOK_L = '(☉_⚆)'
+LOOK_R_HAPPY = '( ◕‿◕)'
+LOOK_L_HAPPY = '(◕‿◕ )'
+SLEEP = '(⇀‿‿↼)'
+SLEEP2 = '(≖‿‿≖)'
+AWAKE = '(◕‿‿◕)'
+BORED = '(-__-)'
+INTENSE = '(°▃▃°)'
+COOL = '(⌐■_■)'
+HAPPY = '(•‿‿•)'
+GRATEFUL = '(^‿‿^)'
+EXCITED = '(ᵔ◡◡ᵔ)'
+MOTIVATED = '(☼‿‿☼)'
+DEMOTIVATED = '(≖__≖)'
+SMART = '(✜‿‿✜)'
+LONELY = '(ب__ب)'
+SAD = '(╥☁╥ )'
+ANGRY = "(-_-')"
+FRIEND = '(♥‿‿♥)'
+BROKEN = '(☓‿‿☓)'
+DEBUG = '(#__#)'
+UPLOAD = '(1__0)'
+UPLOAD1 = '(1__1)'
+UPLOAD2 = '(0__1)'
+
+DEFAULTS = (
+    'LOOK_R', 'LOOK_L', 'LOOK_R_HAPPY', 'LOOK_L_HAPPY', 'SLEEP', 'SLEEP2', 'AWAKE', 'BORED',
+    'INTENSE', 'COOL', 'HAPPY', 'GRATEFUL', 'EXCITED', 'MOTIVATED', 'DEMOTIVATED', 'SMART',
+    'LONELY', 'SAD', 'ANGRY', 'FRIEND', 'BROKEN', 'DEBUG', 'UPLOAD', 'UPLOAD1', 'UPLOAD2'
+)
+
+def value_to_key(value):
+    for key, val in globals().items():
+        if val == value:
+            return key
+    return None
     
     
-class Faces(object):
+class Faces():
     def __init__(self):
-        self._state = State(state={
-
-            
-            
-        })
-
-        self.default = DEFAULTS
-        
+        self._state = State(state={})
         
         self.PNG = False
         self.POSITION_X = 0
@@ -67,12 +71,14 @@ class Faces(object):
     def load_from_config(self, config, view):
         self.view = view
         
+        #load global faces
         for face_name, face_value in config.items():
-            self._state.add_single_raw(face_name,Face(face_value,(config.get('position_x'),config.get('position_y')),fonts.Huge,view.FOREGROUND,png=False))
-            
-            
+            if face_name.upper() in DEFAULTS:
+                self._state.add_single_raw(face_name.upper(),Face(face_value,(config.get('position_x'),config.get('position_y')),fonts.Huge,view.FOREGROUND,png=False))
+            else:
+                pass
         #add default face element
-        view._state.add_single_raw(self._state['SLEEP'])
+        view._state.add_single_raw('face', self._state.get_element('SLEEP'))
             
     def load_from_theme(self, themeObj, view):
         self.view = view
@@ -88,12 +94,12 @@ class Faces(object):
         #load from theme and create all state face elements in memory so its faster
         
         #add default face element
-        view._state.add_single_raw(self._state['SLEEP'])
+        view._state.add_single_raw('face', self._state.get_element('SLEEP'))
             
     def setFace(self, name):
         #set face current
-        self.view._state[name] = self._state.get(name)
-    
+        self.view._state._state['face'] = self._state.get_element(name)
+
     def getCurrent(self):
         #get current face object
         return self.current

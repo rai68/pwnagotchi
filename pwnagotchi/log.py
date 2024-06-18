@@ -218,7 +218,9 @@ def setup_logging(args, config):
     cfg = config['main']['log']
     filename = cfg['path']
 
-    formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
+    #global formatter
+    formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] [%(name)s] [%(threadName)s] : %(message)s")
+    
     root = logging.getLogger()
 
     root.setLevel(logging.DEBUG if args.debug else logging.INFO)
@@ -232,10 +234,14 @@ def setup_logging(args, config):
         file_handler.setFormatter(formatter)
         root.addHandler(file_handler)
 
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    root.addHandler(console_handler)
+    for han in root.handlers:
+        han.setFormatter(formatter)
+    #console_handler = logging.StreamHandler()
+    #console_handler.setFormatter(formatter)
+    #root.addHandler(console_handler)
 
+    
+    
     if not args.debug:
         # disable scapy and tensorflow logging
         logging.getLogger("scapy").disabled = True

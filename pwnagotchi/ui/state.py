@@ -37,6 +37,10 @@ class State(object):
     def get(self, key):
         with self._lock:
             return self._state[key].value if key in self._state else None
+        
+    def get_element(self, key):
+        with self._lock:
+            return self._state[key] if key in self._state else None
 
     def reset(self):
         with self._lock:

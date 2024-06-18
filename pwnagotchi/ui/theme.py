@@ -13,7 +13,6 @@ import pwnagotchi.plugins as plugins
 import pwnagotchi.ui.faces as faces
 import pwnagotchi.ui.fonts as fonts
 import pwnagotchi.ui.web as web
-import pwnagotchi.ui.theme as theme
 import pwnagotchi.utils as utils
 from pwnagotchi.ui.components import *
 from pwnagotchi.ui.state import State
@@ -37,11 +36,10 @@ class Theme():
         #load theme
         endTheme = None
         to_load = self._config['ui'].get('theme', False)
-        logging.debug("Loading theme: " + to_load)
-        if to_load == False:
+        if to_load == False or to_load == "":
             #return if no theme to load
             return endTheme
-        
+        logging.debug("Loading theme: " + to_load)
         
         #make theme directory list
         themes_dirs = []
@@ -54,7 +52,7 @@ class Theme():
                 if dirs == to_load:
                     logging.debug("Found theme type in theme dirs")
                     try:
-                                               # e.g /etc/pwnagotchi/themes/pika/pika.toml
+                                                # e.g /etc/pwnagotchi/themes/pika/pika.toml
                         self.theme_config = toml.load(os.path.join(directory, dirs, to_load + ".toml"))
                         lookfor = [self._width, self._height,self._ori]
         
@@ -99,15 +97,11 @@ class Theme():
         
         #return the image path
         return file_path
-    
-    
+
+
     def get_faces_from_config(self,size_x,size_y,colormode, ori):
         faces = {}
         dir_to_search = os.path.join(self._loadedTheme_root, self.theme_config['face'].get('dir', ''))
         for typ in faces.DEFAULTS.keys():
             faces[typ] = os.path.join(dir_to_search, f"faces-{typ}-{size_x}-{size_y}-{colormode}-{ori}.png")
         return faces
-            
-            
-    def get_faces(self):
-        return self.face

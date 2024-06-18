@@ -122,10 +122,7 @@ class View(object):
         # setup faces from the configuration in case the user customized them
         # theme injection here, will get faces from config if no theme loaded, but if a theme is loaded it will get the directories from the theme dir
         
-        if self.theme is None:
-            self.faces = faces.Faces().load_from_config(config, self)
-        else:
-            self.faces = faces.Faces().load_from_theme(self.theme, self)
+
             
         self._agent = None
         self._render_cbs = []
@@ -143,7 +140,9 @@ class View(object):
         self._state = None
         
         if self.theme is None:
-            self._state = State(state={
+            self._state = State()
+            
+            defaultElems = {
             'channel': LabeledValue(color=self.FOREGROUND, label='CH', value='00', position=self._layout['channel'],
                                     label_font=fonts.Bold,
                                     text_font=fonts.Medium),
@@ -179,11 +178,20 @@ class View(object):
                                    text_font=fonts.Medium),
             'mode': Text(value='AUTO', position=self._layout['mode'],
                          font=fonts.Bold, color=self.FOREGROUND),
-        })
+        }
+            for key, val in defaultElems.items():
+                self._state.add_single_raw(key,val)
+            
         elif self.theme is not None:
-            self._state = self.theme.state
+            self._state = self.theme._state
         
-        
+        #loaded theme or default now set face
+        if self.theme is None:
+            self.faces = faces.Faces()
+            self.faces.load_from_config(config['ui']['faces'], self)
+        else:
+            self.faces = faces.Faces()
+            self.faces.load_from_theme(self.theme, self)
         
 
         if state:
@@ -249,7 +257,11 @@ class View(object):
             time.sleep(delay)
 
     def set(self, key, value):
-        self._state.set(key, value)
+        if key == 'face':
+            key = faces.value_to_key(value)
+            self.faces.setFace(key)
+        else:
+            self._state.set(key, value)
         
     def set_label(self, key, value):
         self._state.set_label(key, value)
@@ -259,18 +271,18 @@ class View(object):
 
     def on_starting(self):
         self.set('status', self._voice.on_starting() + ("\n(v%s)" % pwnagotchi.__version__))
-        self.set('face', self.faces.AWAKE)
+        self.set('face', faces.AWAKE)
         self.update()
 
     def on_ai_ready(self):
         self.set('mode', '  AI')
-        self.set('face', self.faces.HAPPY)
+        self.set('face', faces.HAPPY)
         self.set('status', self._voice.on_ai_ready())
         self.update()
 
     def on_manual_mode(self, last_session):
         self.set('mode', 'MANU')
-        self.set('face', self.faces.SAD if (last_session.epochs > 3 and last_session.handshakes == 0) else self.faces.HAPPY)
+        self.set('face', faces.SAD if (last_session.epochs > 3 and last_session.handshakes == 0) else faces.HAPPY)
         self.set('status', self._voice.on_last_session_data(last_session))
         self.set('epoch', "%04d" % last_session.epochs)
         self.set('uptime', last_session.duration)
@@ -282,24 +294,24 @@ class View(object):
 
     def is_normal(self):
         return self._state.get('face') not in (
-            self.faces.INTENSE,
-            self.faces.COOL,
-            self.faces.BORED,
-            self.faces.HAPPY,
-            self.faces.EXCITED,
-            self.faces.MOTIVATED,
-            self.faces.DEMOTIVATED,
-            self.faces.SMART,
-            self.faces.SAD,
-            self.faces.LONELY)
+            faces.INTENSE,
+            faces.COOL,
+            faces.BORED,
+            faces.HAPPY,
+            faces.EXCITED,
+            faces.MOTIVATED,
+            faces.DEMOTIVATED,
+            faces.SMART,
+            faces.SAD,
+            faces.LONELY)
 
     def on_keys_generation(self):
-        self.set('face', self.faces.AWAKE)
+        self.set('face', faces.AWAKE)
         self.set('status', self._voice.on_keys_generation())
         self.update()
 
     def on_normal(self):
-        self.set('face', self.faces.AWAKE)
+        self.set('face', faces.AWAKE)
         self.set('status', self._voice.on_normal())
         self.update()
 
@@ -336,13 +348,13 @@ class View(object):
         face = ''
         # first time they met, neutral mood
         if peer.first_encounter():
-            face = random.choice((self.faces.AWAKE, self.faces.COOL))
+            face = random.choice((faces.AWAKE, faces.COOL))
         # a good friend, positive expression
         elif peer.is_good_friend(self._config):
-            face = random.choice((self.faces.MOTIVATED, self.faces.FRIEND, self.faces.HAPPY))
+            face = random.choice((faces.MOTIVATED, faces.FRIEND, faces.HAPPY))
         # normal friend, neutral-positive
         else:
-            face = random.choice((self.faces.EXCITED, self.faces.HAPPY, self.faces.SMART))
+            face = random.choice((faces.EXCITED, faces.HAPPY, faces.SMART))
 
         self.set('face', face)
         self.set('status', self._voice.on_new_peer(peer))
@@ -350,17 +362,17 @@ class View(object):
         time.sleep(3)
 
     def on_lost_peer(self, peer):
-        self.set('face', self.faces.LONELY)
+        self.set('face', faces.LONELY)
         self.set('status', self._voice.on_lost_peer(peer))
         self.update()
 
     def on_free_channel(self, channel):
-        self.set('face', self.faces.SMART)
+        self.set('face', faces.SMART)
         self.set('status', self._voice.on_free_channel(channel))
         self.update()
 
     def on_reading_logs(self, lines_so_far=0):
-        self.set('face', self.faces.SMART)
+        self.set('face', faces.SMART)
         self.set('status', self._voice.on_reading_logs(lines_so_far))
         self.update()
 
@@ -376,20 +388,20 @@ class View(object):
             if was_normal or step > 5:
                 if sleeping:
                     if secs > 1:
-                        self.set('face', self.faces.SLEEP)
+                        self.set('face', faces.SLEEP)
                         self.set('status', self._voice.on_napping(int(secs)))
 
                     else:
-                        self.set('face', self.faces.SLEEP2)
+                        self.set('face', faces.SLEEP2)
                         self.set('status', self._voice.on_awakening())
                 else:
                     self.set('status', self._voice.on_waiting(int(secs)))
 
                     good_mood = self._agent.in_good_mood()
                     if step % 2 == 0:
-                        self.set('face', self.faces.LOOK_R_HAPPY if good_mood else self.faces.LOOK_R)
+                        self.set('face', faces.LOOK_R_HAPPY if good_mood else faces.LOOK_R)
                     else:
-                        self.set('face', self.faces.LOOK_L_HAPPY if good_mood else self.faces.LOOK_L)
+                        self.set('face', faces.LOOK_L_HAPPY if good_mood else faces.LOOK_L)
 
             time.sleep(part)
             secs -= part
@@ -397,89 +409,89 @@ class View(object):
         self.on_normal()
 
     def on_shutdown(self):
-        self.set('face', self.faces.SLEEP)
+        self.set('face', faces.SLEEP)
         self.set('status', self._voice.on_shutdown())
         self.update(force=True)
         self._frozen = True
 
     def on_bored(self):
-        self.set('face', self.faces.BORED)
+        self.set('face', faces.BORED)
         self.set('status', self._voice.on_bored())
         self.update()
 
     def on_sad(self):
-        self.set('face', self.faces.SAD)
+        self.set('face', faces.SAD)
         self.set('status', self._voice.on_sad())
         self.update()
 
     def on_angry(self):
-        self.set('face', self.faces.ANGRY)
+        self.set('face', faces.ANGRY)
         self.set('status', self._voice.on_angry())
         self.update()
 
     def on_motivated(self, reward):
-        self.set('face', self.faces.MOTIVATED)
+        self.set('face', faces.MOTIVATED)
         self.set('status', self._voice.on_motivated(reward))
         self.update()
 
     def on_demotivated(self, reward):
-        self.set('face', self.faces.DEMOTIVATED)
+        self.set('face', faces.DEMOTIVATED)
         self.set('status', self._voice.on_demotivated(reward))
         self.update()
 
     def on_excited(self):
-        self.set('face', self.faces.EXCITED)
+        self.set('face', faces.EXCITED)
         self.set('status', self._voice.on_excited())
         self.update()
 
     def on_assoc(self, ap):
-        self.set('face', self.faces.INTENSE)
+        self.set('face', faces.INTENSE)
         self.set('status', self._voice.on_assoc(ap))
         self.update()
 
     def on_deauth(self, sta):
-        self.set('face', self.faces.COOL)
+        self.set('face', faces.COOL)
         self.set('status', self._voice.on_deauth(sta))
         self.update()
 
     def on_miss(self, who):
-        self.set('face', self.faces.SAD)
+        self.set('face', faces.SAD)
         self.set('status', self._voice.on_miss(who))
         self.update()
 
     def on_grateful(self):
-        self.set('face', self.faces.GRATEFUL)
+        self.set('face', faces.GRATEFUL)
         self.set('status', self._voice.on_grateful())
         self.update()
 
     def on_lonely(self):
-        self.set('face', self.faces.LONELY)
+        self.set('face', faces.LONELY)
         self.set('status', self._voice.on_lonely())
         self.update()
 
     def on_handshakes(self, new_shakes):
-        self.set('face', self.faces.HAPPY)
+        self.set('face', faces.HAPPY)
         self.set('status', self._voice.on_handshakes(new_shakes))
         self.update()
 
     def on_unread_messages(self, count, total):
-        self.set('face', self.faces.EXCITED)
+        self.set('face', faces.EXCITED)
         self.set('status', self._voice.on_unread_messages(count, total))
         self.update()
         time.sleep(5.0)
 
     def on_uploading(self, to):
-        self.set('face', random.choice((self.faces.UPLOAD, self.faces.UPLOAD1, self.faces.UPLOAD2)))
+        self.set('face', random.choice((faces.UPLOAD, faces.UPLOAD1, faces.UPLOAD2)))
         self.set('status', self._voice.on_uploading(to))
         self.update(force=True)
 
     def on_rebooting(self):
-        self.set('face', self.faces.BROKEN)
+        self.set('face', faces.BROKEN)
         self.set('status', self._voice.on_rebooting())
         self.update()
 
     def on_custom(self, text):
-        self.set('face', self.faces.DEBUG)
+        self.set('face', faces.DEBUG)
         self.set('status', self._voice.custom(text))
         self.update()
 
@@ -498,7 +510,7 @@ class View(object):
                 drawer = ImageDraw.Draw(self._canvas, self.mode)
                 
                 # Draw an image background here if it exists and is a drawable component
-                if 'background' in self._state and isinstance(self._state['background'], ImageBackground):
+                if 'background' in state._state and isinstance(state._state['background'], ImageBackground):
                     self._state['background'].draw(self._canvas, drawer)
                     
 
@@ -508,11 +520,12 @@ class View(object):
                     #lv is a ui componant from States
                     #random colors for fun
                     if self._config['ui'].get('randomise', False):
-                        if self.mode == "RGB" :
-                            lv.color = (random.randint(0, 255),random.randint(0, 255),random.randint(0, 255))
-                        elif self.mode == "BGR;16":
-                            lv.color = (random.randint(0, 31),random.randint(0, 63),random.randint(0, 31))
-                    
+                        if key != 'background':
+                            if self.mode == "RGB" :
+                                lv.color = (random.randint(0, 255),random.randint(0, 255),random.randint(0, 255))
+                            elif self.mode == "BGR;16":
+                                lv.color = (random.randint(0, 31),random.randint(0, 63),random.randint(0, 31))
+                        
                     #draw final LV if not background because its drawn above
                     if isinstance(lv, ImageBackground):
                         pass

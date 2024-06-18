@@ -20,6 +20,7 @@ class Display(View):
         self._canvas_next_event = threading.Event()
         self._canvas_next = None
         self._render_thread_instance = threading.Thread(
+            name="RenderThread"
             target=self._render_thread,
             daemon=True
         )

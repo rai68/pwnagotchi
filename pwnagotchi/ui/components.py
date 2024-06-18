@@ -23,7 +23,7 @@ class Bitmap(Widget):
             self.image = ImageOps.invert(self.image)
         canvas.paste(self.image, self.xy)
 
-class Image(Widget):
+class Imager(Widget):
     def __init__(self, path, xy):
         super().__init__(xy)
         self.image = Image.open(path)
