@@ -24,6 +24,7 @@ class Theme():
     def __init__(self, config, color, width, height, ori="h"):
         self._config = config
         self._state = None
+        self.display = {}
         self.display._height = height
         self.display._width = width
         self.display.colormode = color
