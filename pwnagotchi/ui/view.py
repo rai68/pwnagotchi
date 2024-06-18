@@ -107,7 +107,7 @@ class View(object):
             
         self.invert = 0
         
-        self.theme = theme(config, self.mode, self._layout['width'],self._layout['height']).load_theme()
+        self.theme = theme(config, self.mode, impl._layout['width'],impl._layout['height']).load_theme()
 
         if config['ui'].get('invert', False):
             if self.mode != "1":
