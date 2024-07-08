@@ -1,0 +1,35 @@
+# Define the theme for faces
+[[theme.faces]]
+type = "awake"
+url = "./images/faces/awake.png"
+colormodes = ['RGB', '1']
+sizes = [
+    { width = 250, height = 122, orientation = 'hv' },
+    { width = 144, height = 144, orientation = 'h' }
+]
+
+[[theme.faces]]
+type = "sleeping"
+url = "./images/faces/sleeping.png"
+colormodes = ['RGB']
+sizes = [
+    { width = 250, height = 122, orientation = 'hv' }
+]
+
+# Define the theme for backgrounds
+[[theme.backgrounds]]
+type = "day"
+url = "./images/backgrounds/day.png"
+colormodes = ['RGB', '1']
+sizes = [
+    { width = 250, height = 122, orientation = 'hv' },
+    { width = 144, height = 144, orientation = 'h' }
+]
+
+[[theme.backgrounds]]
+type = "night"
+url = "./images/backgrounds/night.png"
+colormodes = ['RGB']
+sizes = [
+    { width = 250, height = 122, orientation = 'hv' }
+]

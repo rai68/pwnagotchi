@@ -61,46 +61,55 @@ def value_to_key(value):
     
 class Faces():
     def __init__(self):
-        self._state = State(state={})
-        
+        self._state = None
+        self._view = None
         self.PNG = False
         self.POSITION_X = 0
         self.POSITION_Y = 40
 
 
-    def load_from_config(self, config, view):
-        self.view = view
+    def load(self, view):
+        self._view = view
+        config = view._config
+        if view.theme:
+            #load global faces
+            for face_name, face_value in config.items():
+                if face_name.upper() in DEFAULTS:
+                    self._state.add_element_raw(face_name.upper(),Face(face_value,(config.get('position_x'),config.get('position_y')),fonts.Huge,view.FOREGROUND,png=False))
+                else:
+                    pass
+            #add default face element
+            view._state.add_element_raw('face', self._state.get_element('SLEEP'))
         
-        #load global faces
-        for face_name, face_value in config.items():
-            if face_name.upper() in DEFAULTS:
-                self._state.add_single_raw(face_name.upper(),Face(face_value,(config.get('position_x'),config.get('position_y')),fonts.Huge,view.FOREGROUND,png=False))
-            else:
-                pass
-        #add default face element
-        view._state.add_single_raw('face', self._state.get_element('SLEEP'))
-            
-    def load_from_theme(self, themeObj, view):
-        self.view = view
-        fx = themeObj.theme_config['face']['pos'].get('x', None)
-        fy = themeObj.theme_config['face']['pos'].get('y', None)
+        
+        
+        self.POSITION_X = view.theme.theme_config['face']['pos'].get('x', None)
+        self.POSITION_Y = view.theme.theme_config['face']['pos'].get('y', None)
         
         if self.POSITION_X == None or self.POSITION_Y == None:
-            logging.error("!!! Theme loaded no position values contact theme author")
-            
-        for face_name, face_value in themeObj.get_faces_from_config().items():
-            self._state.add_single_raw(face_name,Face(face_value,(fx,fy)),fonts.Huge,view.FOREGROUND,png=True)
+            logging.error("!!! Theme loaded no position values for face contact theme author")
+            return None
         
-        #load from theme and create all state face elements in memory so its faster
+        tmpFaceState = {}
+        for face_name, face_value in self.load_faces().items():
+            tmpFaceState[face_name]= Face(face_value,(self.POSITION_X,self.POSITION_Y),fonts.Huge,view.FOREGROUND,png=True)
+        
+        
+        self._state = State(tmpFaceState)
         
         #add default face element
-        view._state.add_single_raw('face', self._state.get_element('SLEEP'))
+        self.setFace(self._state.get_element('SLEEP'))
             
-    def setFace(self, name):
-        #set face current
-        self.view._state._state['face'] = self._state.get_element(name)
+    def setFace(self, element):
+        if element in DEFAULTS:
+            key = value_to_key(element)
+        #update element that is the face on view
+        self._view._state._state['face'] = self._state.get_element(key)
 
     def getCurrent(self):
         #get current face object
-        return self.current
+        return self._view._state._state['face']
+    
+    
+
         

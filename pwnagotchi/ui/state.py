@@ -12,11 +12,8 @@ class State(object):
         self._state[key] = elem
         self._changes[key] = True
 
-    def add_raw(self, state):
-        #adds a raw block of states used for theme injection of elements after state is created
-        self._state = state
-    
-    def add_single_raw(self, key , elem):
+    #adds element without notifying of changes
+    def add_element_raw(self, key , elem):
         self._state[key] = elem
 
     def has_element(self, key):
@@ -74,6 +71,17 @@ class State(object):
             if key in self._state:
                 prev = self._state[key].label
                 self._state[key].label = value
+                
+                if prev != value:
+                    self._changes[key] = True
+                    if key in self._listeners and self._listeners[key] is not None:
+                        self._listeners[key](prev, value, True)
+                        
+    def set_element(self, key, value):
+        with self._lock:
+            if key in self._state:
+                prev = self._state[key]
+                self._state[key] = value
                 
                 if prev != value:
                     self._changes[key] = True

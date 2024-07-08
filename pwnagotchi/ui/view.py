@@ -62,6 +62,19 @@ ROOT = None
 class View(object):
     def __init__(self, config, impl, state=None):
         global ROOT
+        self.invert = 0
+        
+        if config['ui'].get('invert', False):
+            if self.mode != "1":
+                logging.debug("display does not support inverting (yet?): " + str(config['ui']['invert']))
+            else:
+                logging.debug("display inverting: " + str(config['ui']['invert']))
+                self.invert = 1
+                tmp = self.BACKGROUND 
+                self.BACKGROUND = self.FOREGROUND
+                self.FOREGROUND = tmp
+        
+        
         
         #values/code for display color mode    
         self.theme = None
@@ -105,24 +118,13 @@ class View(object):
                 self.FOREGROUND = FOREGROUND_1
             
             
-        self.invert = 0
+
         
-        self.theme = theme.Theme(config, self.mode, impl._layout['width'],impl._layout['height']).load_theme()
-
-        if config['ui'].get('invert', False):
-            if self.mode != "1":
-                logging.debug("display does not support inverting (yet?): " + str(config['ui']['invert']))
-            else:
-                logging.debug("display inverting: " + str(config['ui']['invert']))
-                self.invert = 1
-                tmp = self.BACKGROUND 
-                self.BACKGROUND = self.FOREGROUND
-                self.FOREGROUND = tmp
-
-        # setup faces from the configuration in case the user customized them
-        # theme injection here, will get faces from config if no theme loaded, but if a theme is loaded it will get the directories from the theme dir
         
-
+        #if theme configured, theme load all things from file, create a state object then give it to view
+        if self._config['ui'].get('theme', False) not in (False,""):
+            #return if no theme to load because ui.theme = "" or False
+            self.theme = theme.Theme(config, self.mode, impl._layout['width'],impl._layout['height']).load_theme()
             
         self._agent = None
         self._render_cbs = []
@@ -135,7 +137,7 @@ class View(object):
         self._layout = impl.layout() # ui layout in display config, should be defaults if no theme or config
         self._width = self._layout['width']
         self._height = self._layout['height']
-        self._orientation = None #this actually isnt supported on like 90% of displays lol, its not exposed anywhere
+        self._ori = None #this actually isnt supported on like 90% of displays lol, its not exposed anywhere
         
         self._state = None
         
@@ -178,25 +180,15 @@ class View(object):
                                    text_font=fonts.Medium),
             'mode': Text(value='AUTO', position=self._layout['mode'],
                          font=fonts.Bold, color=self.FOREGROUND),
-        }
-            for key, val in defaultElems.items():
-                self._state.add_single_raw(key,val)
+            }
             
         elif self.theme is not None:
+            #reference theme state to view state
             self._state = self.theme._state
         
-        #loaded theme or default now set face
-        if self.theme is None:
-            self.faces = faces.Faces()
-            self.faces.load_from_config(config['ui']['faces'], self)
-        else:
-            self.faces = faces.Faces()
-            self.faces.load_from_theme(self.theme, self)
+        #load 
+        self.faces = faces.Faces(self)
         
-
-        if state:
-            for key, value in state.items():
-                self._state.set(key, value)
 
         plugins.on('ui_setup', self)
 
@@ -258,8 +250,7 @@ class View(object):
 
     def set(self, key, value):
         if key == 'face':
-            key = faces.value_to_key(value)
-            self.faces.setFace(key)
+            self.faces.setFace(key, value)
         else:
             self._state.set(key, value)
         

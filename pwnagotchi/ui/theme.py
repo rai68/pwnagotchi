@@ -18,6 +18,10 @@ from pwnagotchi.ui.components import *
 from pwnagotchi.ui.state import State
 from pwnagotchi.voice import Voice
 
+#to do 
+
+#use fancygotchi configs they should be fine to embed
+
 
 class Theme():
     def __init__(self, config, color, width, height, ori="h"):
@@ -37,8 +41,9 @@ class Theme():
         endTheme = None
         to_load = self._config['ui'].get('theme', False)
         if to_load == False or to_load == "":
-            #return if no theme to load
+            #return if no theme to load because ui.theme = "" or False
             return endTheme
+        
         logging.debug("Loading theme: " + to_load)
         
         #make theme directory list
@@ -53,15 +58,16 @@ class Theme():
                     logging.debug("Found theme type in theme dirs")
                     try:
                                                 # e.g /etc/pwnagotchi/themes/pika/pika.toml
+                        #load them config
                         self.theme_config = toml.load(os.path.join(directory, dirs, to_load + ".toml"))
                         lookfor = [self._width, self._height,self._ori]
-        
+                        #get sizes supported theme sizes
                         for size in self.theme_config.get('sizes',[]):
-                            if size == lookfor:
+                            if size[0] == self._width and size[1] == self._width and self._ori in size[2]:
                                 self.Found = True #found theme for display
                                 logging.info("Theme found for display parameters")
                                 self._loadedTheme_root = os.path.join(directory, dirs) # e.g #/etc/pwnagotchi/themes/THEMENAME/
-
+                                logging.info("Loading: " + self._loadedTheme_root)
                                 
                                 break
                         break
@@ -69,19 +75,18 @@ class Theme():
                         #error finding theme return None to load default
                         logging.error("Theme could not be found!")
                         return None
-                        pass
+                    
+        if not self.Found:
+            #error finding theme return None to load default
+            logging.error("Theme could not be found!")
+            return None
                     
         self._state = State()
         
         #process background                                            width,                 height,                colormode,              orientation
         self._state.add_raw(ImageBackground(self.get_background(self.display._width, self.display._height,self.self.display.colormode, self.display._ori)))
-        
-        
-        
-        #process face
-        #                        width,                 height,                colormode,                  orientation
-        self.get_faces_from_config(self.display._width, self.display._height,self.self.display.colormode, self.display._ori)
-        
+
+        return self
         
         
     def get_background(self,size_x,size_y,colormode, ori):
@@ -97,11 +102,3 @@ class Theme():
         
         #return the image path
         return file_path
-
-
-    def get_faces_from_config(self,size_x,size_y,colormode, ori):
-        faces = {}
-        dir_to_search = os.path.join(self._loadedTheme_root, self.theme_config['face'].get('dir', ''))
-        for typ in faces.DEFAULTS.keys():
-            faces[typ] = os.path.join(dir_to_search, f"faces-{typ}-{size_x}-{size_y}-{colormode}-{ori}.png")
-        return faces
