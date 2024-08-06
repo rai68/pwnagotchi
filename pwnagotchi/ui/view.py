@@ -107,9 +107,8 @@ class View(object):
             
             
         self.invert = 0
-
         if 'invert' in config['ui'] and config['ui']['invert'] == True:
-            logging.debug("INVERT BLACK/WHITES:" + str(config['ui']['invert']))
+            logging.debug("INVERT:" + str(config['ui']['invert']))
             self.invert = 1
             tmp = self.FOREGROUND 
             self.FOREGROUND = self.FOREGROUND

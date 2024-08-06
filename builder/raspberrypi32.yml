@@ -58,7 +58,6 @@
         remove:
           - nfs-common
           - triggerhappy
-          - wpasupplicant
         install:
           - aircrack-ng
           - autoconf
@@ -107,6 +106,7 @@
           - python3-pip
           - python3-protobuf
           - python3-setuptools
+          - python3-smbus
           - qpdf
           - raspberrypi-kernel-headers
           - rsync
@@ -190,7 +190,7 @@
           enable_uart=1
           
           [pi0]
-          dtoverlay=spi0-0cs
+          dtoverlay=spi0-2cs
           #dtoverlay=disable-wifi
 
     - name: change hostname
@@ -540,6 +540,13 @@
       apt:
         autoremove: yes
       when: removed.changed
+
+    - name: install rpi-sys-mods again?
+      apt:
+        state: present
+        name: raspberrypi-sys-mods
+        update_cache: yes
+        install_recommends: no
 
     - name: clean apt cache
       apt:

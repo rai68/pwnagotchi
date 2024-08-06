@@ -1,8 +1,8 @@
 packer {
   required_plugins {
-    arm = {
-      version = ">=1.0.0"
-      source  = "github.com/michalfita/cross"
+    arm-image = {
+      source  = "github.com/solo-io/arm-image"
+      version = ">= 0.0.1"
     }
     ansible = {
       source  = "github.com/hashicorp/ansible"
@@ -19,41 +19,21 @@ variable "pwn_version" {
   type = string
 }
 
-source "arm" "rpi32-pwnagotchi" {
-  file_checksum_url             = "https://downloads.raspberrypi.com/raspios_lite_armhf/images/raspios_lite_armhf-2024-03-15/2024-03-15-raspios-bookworm-armhf-lite.img.xz.sha256"
-  file_urls                     = ["https://downloads.raspberrypi.com/raspios_lite_armhf/images/raspios_lite_armhf-2024-03-15/2024-03-15-raspios-bookworm-armhf-lite.img.xz"]
-  file_checksum_type            = "sha256"
-  file_target_extension         = "xz"
-  file_unarchive_cmd            = ["unxz", "$ARCHIVE_PATH"]
-  image_path                    = "../../../pwnagotchi-32bit.img"
-  qemu_binary_source_path       = "/usr/libexec/qemu-binfmt/arm-binfmt-P"
-  qemu_binary_destination_path  = "/usr/libexec/qemu-binfmt/arm-binfmt-P"
-  image_build_method            = "resize"
-  image_size                    = "9G"
-  image_type                    = "dos"
-  image_partitions {
-    name         = "boot"
-    type         = "c"
-    start_sector = "8192"
-    filesystem   = "fat"
-    size         = "256M"
-    mountpoint   = "/boot/firmware"
-  }
-  image_partitions {
-    name         = "root"
-    type         = "83"
-    start_sector = "532480"
-    filesystem   = "ext4"
-    size         = "0"
-    mountpoint   = "/"
-  }
+source "arm-image" "rpi32-pwnagotchi" {
+  image_type      = "raspberrypi"
+  iso_url         = "https://downloads.raspberrypi.com/raspios_lite_armhf/images/raspios_lite_armhf-2024-07-04/2024-07-04-raspios-bookworm-armhf-lite.img.xz"
+  iso_checksum    = "sha256:df9c192d66d35e1ce67acde33a5b5f2b81ff02d2b986ea52f1f6ea211d646a1b"
+  output_filename = "../../../pwnagotchi-32bit.img"
+  qemu_binary     = "qemu-arm-static"
+  qemu_args       = ["-cpu", "arm1176"]
+  image_arch      = "arm"
+  image_mounts    = ["/boot/firmware","/"]
+  target_image_size = 19969908736
 }
+
 build {
   name = "Raspberry Pi 32 Pwnagotchi"
-  sources = ["source.arm.rpi32-pwnagotchi"]
-  provisioner "shell" {
-    inline = ["uname -m"]
-  }
+  sources = ["source.arm-image.rpi32-pwnagotchi"]
   provisioner "file" {
     destination = "/usr/bin/"
     sources     = [

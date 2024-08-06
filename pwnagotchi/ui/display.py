@@ -21,7 +21,8 @@ class Display(View):
         self._canvas_next = None
         self._render_thread_instance = threading.Thread(
             target=self._render_thread,
-            daemon=True
+            daemon=True,
+            name="Renderer"
         )
         self._render_thread_instance.start()
 
@@ -234,6 +235,9 @@ class Display(View):
 
     def is_inky(self):
         return self._implementation.name == 'inky'
+
+    def is_inkyv2(self):
+        return self._implementation.name == 'inkyv2'
 
     def is_dummy_display(self):
         return self._implementation.name == 'dummydisplay'
