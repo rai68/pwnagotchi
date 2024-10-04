@@ -1,4 +1,5 @@
-import _thread
+#import _thread
+import threading
 import logging
 import random
 import time
@@ -172,7 +173,8 @@ class View(object):
         plugins.on('ui_setup', self)
 
         if config['ui']['fps'] > 0.0:
-            _thread.start_new_thread(self._refresh_handler, ())
+            threading.Thread(target=self._refresh_handler, args=(), name="UI Handler", daemon = True).start()
+            
             self._ignore_changes = ()
         else:
             logging.warning("ui.fps is 0, the display will only update for major changes")
@@ -214,8 +216,9 @@ class View(object):
         delay = 1.0 / self._config['ui']['fps']
         while True:
             try:
-                name = self._state.get('name')
-                self.set('name', name.rstrip('█').strip() if '█' in name else (name + ' █'))
+                if self._config['ui'].get('cursor', True) == True:
+                    name = self._state.get('name')
+                    self.set('name', name.rstrip('█').strip() if '█' in name else (name + ' █'))
                 self.update()
             except Exception as e:
                 logging.warning("non fatal error while updating view: %s" % e)

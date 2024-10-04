@@ -270,9 +270,9 @@ class Agent(Client, Automata, AsyncAdvertiser, AsyncTrainer):
         self._save_recovery_data()
         pwnagotchi.reboot()
 
-    def _restart(self):
+    def _restart(self, mode='AUTO'):
         self._save_recovery_data()
-        pwnagotchi.restart("AUTO")
+        pwnagotchi.restart(mode)
 
     def _save_recovery_data(self):
         logging.warning("writing recovery data to %s ...", RECOVERY_DATA_FILE)
@@ -390,7 +390,7 @@ class Agent(Client, Automata, AsyncAdvertiser, AsyncTrainer):
     def start_event_polling(self):
         # start a thread and pass in the mainloop
         #_thread.start_new_thread(self._event_poller, (asyncio.get_event_loop(),))
-        threading.Thread(target=self._event_poller, args=(asyncio.get_event_loop(),), name="Event Polling", daemon=True)
+        threading.Thread(target=self._event_poller, args=(asyncio.get_event_loop(),), name="Event Polling", daemon=True).start()
 
     def is_module_running(self, module):
         s = self.session()
